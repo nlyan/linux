@@ -1654,7 +1654,7 @@ static int ath11k_qmi_respond_fw_mem_request(struct ath11k_base *ab)
 	struct qmi_wlanfw_respond_mem_resp_msg_v01 resp;
 	struct qmi_txn txn = {};
 	int ret = 0, i;
-	bool delayed = false;
+	bool delayed;
 
 	req = kzalloc(sizeof(*req), GFP_KERNEL);
 	if (!req)
@@ -1673,6 +1673,7 @@ static int ath11k_qmi_respond_fw_mem_request(struct ath11k_base *ab)
 			   ab->qmi.mem_seg_count);
 		memset(req, 0, sizeof(*req));
 	} else {
+		delayed = false;
 		req->mem_seg_len = ab->qmi.mem_seg_count;
 
 		for (i = 0; i < req->mem_seg_len ; i++) {
@@ -1748,6 +1749,7 @@ static int ath11k_qmi_alloc_target_mem_chunk(struct ath11k_base *ab)
 	struct target_mem_chunk *chunk;
 
 	ab->qmi.target_mem_delayed = false;
+
 	for (i = 0; i < ab->qmi.mem_seg_count; i++) {
 		chunk = &ab->qmi.target_mem[i];
 		chunk->vaddr = dma_alloc_coherent(ab->dev,
@@ -1756,7 +1758,8 @@ static int ath11k_qmi_alloc_target_mem_chunk(struct ath11k_base *ab)
 						  GFP_KERNEL);
 		if (!chunk->vaddr) {
 			if (ab->qmi.mem_seg_count <= 2) {
-				ath11k_info(ab, "too big size: 0x%x, type:%u, will try later with small size.\n",
+				ath11k_dbg(ab, ATH11K_DBG_QMI,
+					   "qmi dma allocation failed (%d B type %u), will try later with small size\n",
 					    chunk->size,
 					    chunk->type);
 				ath11k_qmi_free_target_mem_chunk(ab);
